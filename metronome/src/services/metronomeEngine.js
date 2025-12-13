@@ -66,6 +66,18 @@ export class MetronomeEngine {
             writable: true,
             value: []
         });
+        Object.defineProperty(this, "audioStateSubscribers", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "audioState", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 'uninitialized'
+        });
         Object.defineProperty(this, "buffers", {
             enumerable: true,
             configurable: true,
@@ -80,6 +92,11 @@ export class MetronomeEngine {
     subscribeState(sub) {
         this.stateSubscribers.push(sub);
         return () => (this.stateSubscribers = this.stateSubscribers.filter((s) => s !== sub));
+    }
+    subscribeAudioState(sub) {
+        this.audioStateSubscribers.push(sub);
+        sub(this.audioState);
+        return () => (this.audioStateSubscribers = this.audioStateSubscribers.filter((s) => s !== sub));
     }
     async start(settings) {
         await this.ensureAudio();
@@ -114,13 +131,24 @@ export class MetronomeEngine {
         this.stateSubscribers.forEach((s) => s({ running: false }));
     }
     async ensureAudio() {
-        if (!this.audioCtx) {
-            this.audioCtx = new AudioContext();
-            await this.audioCtx.resume();
+        try {
+            if (!this.audioCtx) {
+                this.audioCtx = new AudioContext();
+                this.audioCtx.onstatechange = () => this.publishAudioState(this.audioCtx?.state ?? 'uninitialized');
+            }
+            if (this.audioCtx.state === 'suspended') {
+                await this.audioCtx.resume();
+            }
+            this.publishAudioState(this.audioCtx.state);
         }
-        else if (this.audioCtx.state === 'suspended') {
-            await this.audioCtx.resume();
+        catch (error) {
+            console.error('Failed to initialize audio context', error);
+            this.publishAudioState('error');
         }
+    }
+    publishAudioState(state) {
+        this.audioState = state;
+        this.audioStateSubscribers.forEach((sub) => sub(state));
     }
     scheduler() {
         if (!this.audioCtx || !this.settings)

@@ -16,22 +16,52 @@
       <h2>App Status</h2>
       <ul>
         <li>Storage version: {{ version }}</li>
-        <li>PWA support: {{ pwaReady ? 'Ready for offline' : 'Registering…' }}</li>
-        <li>Audio permissions: {{ audioState }}</li>
+        <li>PWA support: {{ pwaLabel }}</li>
+        <li>Audio permissions: {{ audioStatus }}</li>
       </ul>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { STORAGE_KEY, STORAGE_VERSION, useDataStore } from '../stores/dataStore';
+import { useMetronomeService } from '../services/metronomeService';
 
 const dataStore = useDataStore();
 dataStore.load();
 const version = STORAGE_VERSION;
-const pwaReady = ref(false);
-const audioState = ref('Tap Play to unlock audio engine');
+const pwaReady = ref<'pending' | 'ready' | 'failed'>('pending');
+const pwaLabel = computed(() => {
+  if (pwaReady.value === 'ready') return 'Ready for offline';
+  if (pwaReady.value === 'failed') return 'Registration failed';
+  return 'Registering…';
+});
+
+const audioStatus = ref('Tap Play to unlock audio engine');
+const { audioState } = useMetronomeService();
+watch(
+  audioState,
+  (state) => {
+    switch (state) {
+      case 'running':
+        audioStatus.value = 'Audio ready';
+        break;
+      case 'suspended':
+        audioStatus.value = 'Tap Play to unlock audio engine';
+        break;
+      case 'closed':
+        audioStatus.value = 'Audio unavailable (closed)';
+        break;
+      case 'error':
+        audioStatus.value = 'Audio blocked (check permissions)';
+        break;
+      default:
+        audioStatus.value = 'Tap Play to unlock audio engine';
+    }
+  },
+  { immediate: true }
+);
 
 const exportJson = () => {
   const blob = new Blob([dataStore.exportData()], { type: 'application/json' });
@@ -47,10 +77,16 @@ const importJson = async (event: Event) => {
   const input = event.target as HTMLInputElement;
   if (!input.files?.length) return;
   const file = input.files[0];
-  const content = await file.text();
-  dataStore.importData(content);
-  input.value = '';
-  alert('Import complete');
+  try {
+    const content = await file.text();
+    dataStore.importData(content);
+    alert('Import complete');
+  } catch (error) {
+    console.error('Import failed', error);
+    alert('Import failed. Please confirm the file is valid JSON.');
+  } finally {
+    input.value = '';
+  }
 };
 
 const clearAll = () => {
@@ -62,9 +98,35 @@ const clearAll = () => {
 
 onMounted(() => {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(() => {
-      pwaReady.value = true;
-    });
+    const timeout = window.setTimeout(() => {
+      if (pwaReady.value === 'pending') {
+        pwaReady.value = 'failed';
+      }
+    }, 8000);
+
+    navigator.serviceWorker.ready
+      .then(() => {
+        pwaReady.value = 'ready';
+      })
+      .catch(() => {
+        pwaReady.value = 'failed';
+      })
+      .finally(() => {
+        window.clearTimeout(timeout);
+      });
+
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) => {
+        if (!registrations.length && pwaReady.value === 'pending') {
+          pwaReady.value = 'failed';
+        }
+      })
+      .catch(() => {
+        pwaReady.value = 'failed';
+      });
+  } else {
+    pwaReady.value = 'failed';
   }
 });
 </script>
