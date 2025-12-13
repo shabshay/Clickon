@@ -27,4 +27,5 @@ export declare const useMetronomeService: () => {
         accentVolume: number;
         swing?: number | undefined;
     } | null>;
+    audioState: import("vue").Ref<"error" | AudioContextState | "uninitialized", "error" | AudioContextState | "uninitialized">;
 };

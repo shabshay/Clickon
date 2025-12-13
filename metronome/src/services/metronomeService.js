@@ -5,6 +5,7 @@ const isRunning = ref(false);
 const currentStep = ref(0);
 const lastAccent = ref(false);
 const activeSettings = ref(null);
+const audioState = ref('uninitialized');
 metronomeEngine.subscribeTick(({ step, isAccent }) => {
     currentStep.value = step;
     lastAccent.value = isAccent;
@@ -14,6 +15,9 @@ metronomeEngine.subscribeState(({ running }) => {
     if (!running) {
         currentStep.value = 0;
     }
+});
+metronomeEngine.subscribeAudioState((state) => {
+    audioState.value = state;
 });
 export const useMetronomeService = () => {
     const beats = computed(() => {
@@ -44,6 +48,7 @@ export const useMetronomeService = () => {
         currentStep,
         lastAccent,
         beats,
-        activeSettings
+        activeSettings,
+        audioState
     };
 };

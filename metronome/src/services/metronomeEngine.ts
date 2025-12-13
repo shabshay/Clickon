@@ -3,6 +3,8 @@ import { getSignature } from '../constants/timeSignatures';
 
 type TickSubscriber = (payload: { step: number; isAccent: boolean }) => void;
 type StateSubscriber = (payload: { running: boolean }) => void;
+type AudioState = AudioContextState | 'error' | 'uninitialized';
+type AudioStateSubscriber = (state: AudioState) => void;
 
 export const SUBDIVISION_STEPS: Record<Subdivision, number> = {
   quarter: 1,
@@ -21,6 +23,8 @@ export class MetronomeEngine {
   private timerId: number | null = null;
   private tickSubscribers: TickSubscriber[] = [];
   private stateSubscribers: StateSubscriber[] = [];
+  private audioStateSubscribers: AudioStateSubscriber[] = [];
+  private audioState: AudioState = 'uninitialized';
   private buffers: Partial<Record<'wood' | 'snare', AudioBuffer>> = {};
 
   subscribeTick(sub: TickSubscriber) {
@@ -31,6 +35,12 @@ export class MetronomeEngine {
   subscribeState(sub: StateSubscriber) {
     this.stateSubscribers.push(sub);
     return () => (this.stateSubscribers = this.stateSubscribers.filter((s) => s !== sub));
+  }
+
+  subscribeAudioState(sub: AudioStateSubscriber) {
+    this.audioStateSubscribers.push(sub);
+    sub(this.audioState);
+    return () => (this.audioStateSubscribers = this.audioStateSubscribers.filter((s) => s !== sub));
   }
 
   async start(settings: MetronomeSettings) {
@@ -67,12 +77,26 @@ export class MetronomeEngine {
   }
 
   private async ensureAudio() {
-    if (!this.audioCtx) {
-      this.audioCtx = new AudioContext();
-      await this.audioCtx.resume();
-    } else if (this.audioCtx.state === 'suspended') {
-      await this.audioCtx.resume();
+    try {
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioContext();
+        this.audioCtx.onstatechange = () => this.publishAudioState(this.audioCtx?.state ?? 'uninitialized');
+      }
+
+      if (this.audioCtx.state === 'suspended') {
+        await this.audioCtx.resume();
+      }
+
+      this.publishAudioState(this.audioCtx.state);
+    } catch (error) {
+      console.error('Failed to initialize audio context', error);
+      this.publishAudioState('error');
     }
+  }
+
+  private publishAudioState(state: AudioState) {
+    this.audioState = state;
+    this.audioStateSubscribers.forEach((sub) => sub(state));
   }
 
   private scheduler() {
