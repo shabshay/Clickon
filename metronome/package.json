@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "npm run check:entries && tsc -b && vite build",
     "preview": "vite preview",
-    "check:entries": "node scripts/enforce-ts-entry.mjs"
+    "check:entries": "node scripts/enforce-ts-entry.mjs",
+    "lint": "npm run check:entries && tsc -b"
   },
   "dependencies": {
     "pinia": "^2.1.7",
