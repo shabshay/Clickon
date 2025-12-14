@@ -1,12 +1,23 @@
 <template>
-  <section class="panel start-set" v-if="setlist && orderedSongs.length">
-    <header>
-      <button @click="goBack">← Back</button>
-      <div>
-        <h1>{{ setlist.name }}</h1>
-        <p>{{ currentIndex + 1 }} / {{ orderedSongs.length }}</p>
-      </div>
-    </header>
+<section class="panel start-set" v-if="setlist && orderedSongs.length">
+  <aside class="warning" v-if="missingSongs.length">
+    <div>
+      <p>Some songs in this setlist are missing from your library.</p>
+      <ul>
+        <li v-for="missing in missingSongs" :key="missing.id">
+          Position {{ missing.position + 1 }} — {{ missing.title }} (ID: {{ missing.id }})
+        </li>
+      </ul>
+    </div>
+    <button class="ghost" @click="cleanMissingSongs">Remove missing songs</button>
+  </aside>
+  <header>
+    <button @click="goBack">← Back</button>
+    <div>
+      <h1>{{ setlist.name }}</h1>
+      <p>{{ currentIndex + 1 }} / {{ orderedSongs.length }}</p>
+    </div>
+  </header>
     <article class="current" v-if="currentSong">
       <h2>{{ currentSong.title }}</h2>
       <p class="artist">{{ currentSong.artist || 'Unknown artist' }}</p>
@@ -39,6 +50,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useDataStore } from '../stores/dataStore';
 import { useMetronomeService } from '../services/metronomeService';
 import type { Song } from '../types';
+import { getMissingSetlistEntries, removeMissingFromSetlist } from '../utils/setlistHelpers';
 
 const route = useRoute();
 const router = useRouter();
@@ -53,6 +65,8 @@ const setlist = computed(() => dataStore.setlists.find((list) => list.id === set
 const orderedSongs = computed(() =>
   setlist.value ? setlist.value.songOrder.map((id) => dataStore.songs.find((song) => song.id === id)).filter(Boolean) as Song[] : []
 );
+
+const missingSongs = computed(() => getMissingSetlistEntries(setlist.value, dataStore.songMap));
 
 watch(
   () => setlist.value,
@@ -100,6 +114,16 @@ const prevSong = () => {
 const goNextSong = () => {
   if (currentIndex.value >= orderedSongs.value.length - 1) return;
   currentIndex.value += 1;
+};
+
+const cleanMissingSongs = () => {
+  if (!setlist.value || !missingSongs.value.length) return;
+  const cleanedOrder = removeMissingFromSetlist(setlist.value, dataStore.songMap);
+  dataStore.upsertSetlist({ ...setlist.value, songOrder: cleanedOrder });
+
+  if (currentIndex.value >= cleanedOrder.length) {
+    currentIndex.value = Math.max(cleanedOrder.length - 1, 0);
+  }
 };
 
 const pauseMetronome = () => {
@@ -169,5 +193,28 @@ header {
 .next {
   margin-top: 1rem;
   color: var(--muted);
+}
+
+.warning {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.75rem;
+  background: rgba(255, 200, 0, 0.1);
+}
+
+.warning ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.warning .ghost {
+  align-self: center;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: inherit;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
 }
 </style>

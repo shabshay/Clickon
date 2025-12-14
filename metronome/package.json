@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "check:entries": "node scripts/enforce-ts-entry.mjs",
     "lint": "npm run check:entries && tsc -b",
-    "tsc": "tsc -b && vite build"
+    "tsc": "tsc -b && vite build",
+    "test": "tsc -p tsconfig.test.json && node dist-tests/tests/setlistHelpers.test.js"
   },
   "dependencies": {
     "pinia": "^2.1.7",
