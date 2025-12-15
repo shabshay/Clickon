@@ -28,7 +28,7 @@ npm run preview
 The workflow in `.github/workflows/gh-pages.yml` builds the app on pushes to `main` or `release` and publishes the `dist` folder to GitHub Pages. To turn it on in your fork:
 
 1. In the repository settings, open **Pages** and set the source to **GitHub Actions**.
-2. Make sure the repository name matches the configured Vite base (`/Clickon/`). If you rename the repo, update `base` and `start_url` in `vite.config.ts` to match `/your-repo-name/` and commit that change.
+2. Make sure the repository name matches the configured Vite base (`/clickon/`). If you rename the repo, update `base` and `start_url` in `vite.config.ts` to match `/your-repo-name/` and commit that change.
 3. Push to `main` or `release` (or manually run the workflow). The action will upload the build and create the `github-pages` deployment.
 
 If you want to deploy from a branch other than `main`, adjust the `branches` list in the workflow trigger.
