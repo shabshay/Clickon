@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/clickon/',
+  base: '/Clickon/',
   plugins: [
     vue(),
     VitePWA({
@@ -18,7 +18,7 @@ export default defineConfig({
         theme_color: '#0f0f0f',
         background_color: '#0f0f0f',
         display: 'standalone',
-        start_url: '/clickon/metronome',
+        start_url: '/Clickon/metronome',
         icons: [
           {
             src: 'icons/icon-192.png',

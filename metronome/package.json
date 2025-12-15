@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run check:entries && tsc -b && vite build",
+    "postbuild": "node scripts/create-404.mjs",
     "preview": "vite preview",
     "check:entries": "node scripts/enforce-ts-entry.mjs",
     "lint": "npm run check:entries && tsc -b",
