@@ -21,7 +21,7 @@
 import { RouterLink, RouterView } from 'vue-router';
 
 const links = [
-  { to: '/', label: 'Metronome' },
+  { to: '/metronome', label: 'Metronome' },
   { to: '/songs', label: 'Songs' },
   { to: '/setlists', label: 'Setlists' },
   { to: '/settings', label: 'Settings' }
